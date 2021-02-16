@@ -5,6 +5,8 @@
 
 #include "chip8.hpp"
 
+#define DEBUG 1
+
 namespace chip8 {
 Chip8::Chip8(std::string aROMName)
     : pc(MEM_LO)
@@ -29,7 +31,9 @@ void Chip8::boot() {
 
     // Initialize rand register
     rand = std::uniform_int_distribution<uint8_t>(0, 255U);
-
+	delayTimer = 0;
+	sndTimer = 0;
+	sp = 0;
     pc = MEM_LO;
 
     int videoScale = std::stoi("10");
@@ -101,7 +105,7 @@ void Chip8::loadROM(std::string aROMName) {
     }
 
     rom.seekg(0, std::ios::beg);
-    rom.read((((char*)memory) + MEM_LO), size);
+	rom.read((char*)(memory + MEM_LO), size);
     rom.close();
 }
 
@@ -119,7 +123,6 @@ void Chip8::emulate() {
 
 		if (dt > cycleDelay) {
 			lastCycleTime = currentTime;
-            std::cout << "tock: " << tock << ", pc = " << pc << ", opcode = " << ((opcode & 0xF000u)) << std::endl;
             tick();
             gfxHandle->update(gfx, videoPitch);
             ++tock;
@@ -132,6 +135,9 @@ void Chip8::tick() {
     // Fetch
 	opcode = (memory[pc] << 8u) | memory[pc + 1];
 
+	#ifdef NDEBUG
+	std::cout << "pc = " << pc << ", opcode = " << opcode << std::endl;
+	#endif
 	// Increment the PC before we execute anything
 	pc += 2;
 
@@ -150,7 +156,8 @@ void Chip8::tick() {
 }
 
 void Chip8::dumpMemory() const {
-
+	int i = 0;
+	for (auto val : memory) printf("%d : %d\n", i++, val);
 }
 
 void Chip8::error(std::string aMessage) const {
@@ -163,18 +170,24 @@ void Chip8::error(std::string aMessage) const {
 // 0nnn - SYS addr
 // Jump to a machine code routine at nnn
 void Chip8::_0nnn() {
-
+	std::cout << "error" << std::endl;
 }
 
 // 00E0 - CLS
 // Clear the display
 void Chip8::_00e0() {
+	#ifdef DEBUG
+		std::cout << "\t00e0" << std::endl;
+	#endif
     memset((char*)gfx, 0, sizeof(gfx));
 }
 
 // 00EE - RET
 // Return from a subroutine
 void Chip8::_00ee() {
+	#ifdef DEBUG
+		std::cout << "\t00ee" << std::endl;
+	#endif
     // Decrement stack pointer, pop the stack and set PC to instruction at the
     // top of the newly popped stack
     pc = stack[--sp];
@@ -183,19 +196,29 @@ void Chip8::_00ee() {
 // 1nnn - JP addr
 // Jump to location nnn
 void Chip8::_1nnn() {
+	#ifdef DEBUG
+		std::cout << "\t1nnn" << std::endl;
+	#endif
     pc = opcode & 0x0FFFu;
 }
 
 // 2nnn - CALL addr
 // Call subroutine at nnn
 void Chip8::_2nnn() {
-    stack[sp++] = pc;
+	#ifdef DEBUG
+		std::cout << "\t2nnn" << std::endl;
+	#endif
+    stack[sp] = pc;
+	++sp;
     pc = opcode & 0x0FFFu;
 }
 
 // 3xkk - SE Vx, byte
 // Skip next instruction if Vx = kk
 void Chip8::_3xkk() {
+	#ifdef DEBUG
+		std::cout << "\t3xkk" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t byte = opcode & 0x00FFu;
 
@@ -207,6 +230,9 @@ void Chip8::_3xkk() {
 // 4xkk - SNE Vx, byte
 // Skip next instruction if Vx != kk
 void Chip8::_4xkk() {
+	#ifdef DEBUG
+		std::cout << "\t4xkk" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t byte = opcode & 0x00FFu;
 
@@ -218,6 +244,9 @@ void Chip8::_4xkk() {
 // 5xy0 - SE Vx, Vy
 // Skip next instruction if Vx = Vy
 void Chip8::_5xy0() {
+	#ifdef DEBUG
+		std::cout << "\t5xy0" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 
@@ -229,6 +258,9 @@ void Chip8::_5xy0() {
 // 6xkk - LD Vx, byte
 // Set Vx = kk
 void Chip8::_6xkk() {
+	#ifdef DEBUG
+		std::cout << "\t6xkk" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t byte = opcode & 0x00FFu;
 
@@ -238,6 +270,9 @@ void Chip8::_6xkk() {
 // 7xkk - ADD Vx, byte
 // Vx = Vx + kk
 void Chip8::_7xkk() {
+	#ifdef DEBUG
+		std::cout << "\t7xkk" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t byte = opcode & 0x00FFu;
 
@@ -247,6 +282,9 @@ void Chip8::_7xkk() {
 // 8xy0 - LD Vx, Vy
 // Set Vx = Vy
 void Chip8::_8xy0() {
+	#ifdef DEBUG
+		std::cout << "\t8xy0" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 
@@ -256,6 +294,9 @@ void Chip8::_8xy0() {
 // 8xy1 - OR Vx, Vy
 // Set Vx OR Vy
 void Chip8::_8xy1() {
+	#ifdef DEBUG
+		std::cout << "\t8xy1" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 
@@ -265,6 +306,9 @@ void Chip8::_8xy1() {
 // 8xy2 - AND Vx, Vy
 // Set Vx AND Vy
 void Chip8::_8xy2() {
+	#ifdef DEBUG
+		std::cout << "\t8xy2" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 
@@ -274,6 +318,9 @@ void Chip8::_8xy2() {
 // 8xy2 - XOR Vx, Vy
 // Set Vx XOR Vy
 void Chip8::_8xy3() {
+	#ifdef DEBUG
+		std::cout << "\t8xy3" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 
@@ -283,6 +330,9 @@ void Chip8::_8xy3() {
 // 8xy4 - ADD Vx, Vy
 // Set Vx = Vx + Vy, set VF = carry
 void Chip8::_8xy4() {
+	#ifdef DEBUG
+		std::cout << "\t8xy4" << std::endl;
+	#endif
 	uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 
@@ -300,6 +350,9 @@ void Chip8::_8xy4() {
 // 8xy5 - SUB Vx, Vy
 // Set Vx = Vx - Vy, set VF = NOT borrow
 void Chip8::_8xy5() {
+	#ifdef DEBUG
+		std::cout << "\t8xy5" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 
@@ -315,6 +368,9 @@ void Chip8::_8xy5() {
 // 8xy6 - SHR Vx {, Vy}
 // Set Vx = Vx SHR 1
 void Chip8::_8xy6() {
+	#ifdef DEBUG
+		std::cout << "\t8xy6" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 
 	// Save LSB in VF
@@ -326,6 +382,9 @@ void Chip8::_8xy6() {
 // 8xy7 - SUBN Vx, Vy
 // Set Vx = Vy - Vx, set VF = NOT borrow
 void Chip8::_8xy7() {
+	#ifdef DEBUG
+		std::cout << "\t8xy7" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 
@@ -341,6 +400,9 @@ void Chip8::_8xy7() {
 // 8xyE - SHL Vx {, Vy}
 // Set Vx = Vx SHL 1
 void Chip8::_8xyE() {
+	#ifdef DEBUG
+		std::cout << "\t8xyE" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 
 	// Save MSB in VF
@@ -352,6 +414,9 @@ void Chip8::_8xyE() {
 // 9xy0 - SNE Vx, Vy
 // Skip next instruction if Vx != Vy
 void Chip8::_9xy0() {
+	#ifdef DEBUG
+		std::cout << "\t9xy0" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 
@@ -363,6 +428,9 @@ void Chip8::_9xy0() {
 // Annn - LD I, addr
 // Set I = nnn
 void Chip8::_annn() {
+	#ifdef DEBUG
+		std::cout << "\tannn" << std::endl;
+	#endif
     uint16_t address = opcode & 0x0FFFu;
 	I = address;
 }
@@ -370,6 +438,9 @@ void Chip8::_annn() {
 // Bnnn - JP V0, addr
 // Jump to location nnn + V0
 void Chip8::_bnnn() {
+	#ifdef DEBUG
+		std::cout << "\tbnnn" << std::endl;
+	#endif
     uint16_t address = opcode & 0x0FFFu;
 	pc = V[0] + address;
 }
@@ -377,6 +448,9 @@ void Chip8::_bnnn() {
 // Cxkk - RND Vx, byte
 // Set Vx = random byte AND kk
 void Chip8::_cxkk() {
+	#ifdef DEBUG
+		std::cout << "\tcxkk" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t byte = opcode & 0x00FFu;
 
@@ -387,6 +461,9 @@ void Chip8::_cxkk() {
 // Display n-byte sprite starting at memory location I at (Vx, Vy),
 // set VF = collision
 void Chip8::_dxyn() {
+	#ifdef DEBUG
+		std::cout << "\tdxyn" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t Vy = (opcode & 0x00F0u) >> 4u;
 	uint8_t height = opcode & 0x000Fu;
@@ -407,12 +484,12 @@ void Chip8::_dxyn() {
 			// Sprite pixel is on
 			if (spritePixel) {
 				// Screen pixel also on - collision
-				if (*screenPixel == 0xFFFFFF) {
+				if (*screenPixel == 0xFFFFFFFF) {
 					V[0xF] = 1;
 				}
 
 				// Effectively XOR with the sprite pixel
-				*screenPixel ^= 0xFFFFFF;
+				*screenPixel ^= 0xFFFFFFFF;
 			}
 		}
 	}
@@ -421,6 +498,9 @@ void Chip8::_dxyn() {
 // Ex9E - SKP Vx
 // Skip next instruction if key with the value of Vx is pressed
 void Chip8::_ex9e() {
+	#ifdef DEBUG
+		std::cout << "\tex9e" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t k = V[Vx];
 
@@ -432,6 +512,9 @@ void Chip8::_ex9e() {
 // ExA1 - SKNP Vx
 // Skip next instruction if key with the value of Vx is not pressed
 void Chip8::_exa1() {
+	#ifdef DEBUG
+		std::cout << "\texa1" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t k = V[Vx];
 
@@ -443,6 +526,9 @@ void Chip8::_exa1() {
 // Fx07 - LD Vx, DT
 // Set Vx = delay timer value
 void Chip8::_fx07() {
+	#ifdef DEBUG
+		std::cout << "\tfx07" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	V[Vx] = delayTimer;
 }
@@ -450,6 +536,9 @@ void Chip8::_fx07() {
 // Fx0A - LD Vx, K
 // Wait for a key press, store the value of the key in Vx
 void Chip8::_fx0a() {
+	#ifdef DEBUG
+		std::cout << "\tfx0a" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 
 	if (key[0]) {
@@ -492,6 +581,9 @@ void Chip8::_fx0a() {
 // Fx15 - LD DT, Vx
 // Set delay timer = Vx
 void Chip8::_fx15() {
+	#ifdef DEBUG
+		std::cout << "\tfx15" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	delayTimer = V[Vx];
 }
@@ -499,6 +591,9 @@ void Chip8::_fx15() {
 // Fx18 - LD ST, Vx
 // Set sound timer = Vx
 void Chip8::_fx18() {
+	#ifdef DEBUG
+		std::cout << "\tfx18" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	sndTimer = V[Vx];
 }
@@ -506,6 +601,9 @@ void Chip8::_fx18() {
 // Fx1E - ADD I, Vx
 // Set I = I + Vx
 void Chip8::_fx1e() {
+	#ifdef DEBUG
+		std::cout << "\tfx1e" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	I += V[Vx];
 }
@@ -513,6 +611,9 @@ void Chip8::_fx1e() {
 // Fx29 - LD F, Vx
 // Set I = location of sprite for digit Vx
 void Chip8::_fx29() {
+	#ifdef DEBUG
+		std::cout << "\tfx29" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t digit = V[Vx];
 
@@ -522,6 +623,9 @@ void Chip8::_fx29() {
 // Fx33 - LD B, Vx
 // Store BCD representation of Vx in memory locations I, I+1, and I+2
 void Chip8::_fx33() {
+	#ifdef DEBUG
+		std::cout << "\tfx33" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 	uint8_t value = V[Vx];
 
@@ -540,6 +644,9 @@ void Chip8::_fx33() {
 // Fx55 - LD [I], Vx
 // Store registers V0 through Vx in memory starting at location I
 void Chip8::_fx55() {
+	#ifdef DEBUG
+		std::cout << "\tfx55" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 
 	for (uint8_t i = 0; i <= Vx; ++i) {
@@ -550,6 +657,9 @@ void Chip8::_fx55() {
 // Fx65 - LD Vx, [I]
 // Read registers V0 through Vx from memory starting at location I
 void Chip8::_fx65() {
+	#ifdef DEBUG
+		std::cout << "\tfx65" << std::endl;
+	#endif
     uint8_t Vx = (opcode & 0x0F00u) >> 8u;
 
 	for (uint8_t i = 0; i <= Vx; ++i) {

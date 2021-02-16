@@ -53,25 +53,25 @@ class Chip8 final {
 
         // CHIP-8 has 16 b-bit registers V0-VF. The VF register usually stores (carry)
         // flags and should not be used as a general purpose register
-        uint8_t V[NUM_REGS];
+        uint8_t V[NUM_REGS]{};
 
         // Address register is 16 bits wide
-        uint16_t I;
+        uint16_t I{};
         uint16_t pc;
-        uint16_t sp;
+        uint16_t sp{};
 
         // Original CHIP-8 stack size was 8 bytes
         uint8_t stack[STACK_SIZE];
 
         // CHIP-8 graphics screen is 64x32 pixels where sprites are XORed
-        uint32_t gfx[GFX_WIDTH * GFX_HEIGHT];
+        uint32_t gfx[GFX_WIDTH * GFX_HEIGHT]{};
 
         // Timers used for events and sounds
-        uint8_t delayTimer;
-        uint8_t sndTimer;
+        uint8_t delayTimer{};
+        uint8_t sndTimer{};
 
         // Map 16 input keys to a state array
-        uint8_t key[MAX_KEYS];
+        uint8_t key[MAX_KEYS]{};
 
         // Gfx handle
         Gfx* gfxHandle;
