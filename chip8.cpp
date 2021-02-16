@@ -8,10 +8,15 @@
 namespace chip8 {
 Chip8::Chip8(std::string aROMName)
     : pc(MEM_LO)
-    , randGen(std::chrono::system_clock::now().time_since_epoch().count()) {
+    , randGen(std::chrono::system_clock::now().time_since_epoch().count())
+    , quit(false) {
     boot();
     loadInsts();
     loadROM(aROMName);
+}
+
+Chip8::~Chip8() {
+    delete gfxHandle;
 }
 
 void Chip8::boot() {
@@ -24,6 +29,11 @@ void Chip8::boot() {
 
     // Initialize rand register
     rand = std::uniform_int_distribution<uint8_t>(0, 255U);
+
+    int videoScale = std::stoi("10");
+
+    gfxHandle = new Gfx("CHIP-8 Emulator", GFX_WIDTH * videoScale, GFX_HEIGHT * videoScale,
+                        GFX_WIDTH, GFX_HEIGHT);
 }
 
 void Chip8::loadInsts() {
@@ -94,8 +104,21 @@ void Chip8::loadROM(std::string aROMName) {
 }
 
 void Chip8::emulate() {
-    while (true) {
-        tick();
+    int videoPitch = sizeof(gfx[0]) * GFX_WIDTH;
+	auto lastCycleTime = std::chrono::high_resolution_clock::now();
+    int cycleDelay = std::stoi("1");
+
+    while (!quit) {
+        quit = gfxHandle->input(key);
+
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float dt = std::chrono::duration<float, std::chrono::milliseconds::period>(currentTime - lastCycleTime).count();
+
+		if (dt > cycleDelay) {
+			lastCycleTime = currentTime;
+            tick();
+            gfxHandle->update(gfx, videoPitch);
+        }
     }
 }
 
@@ -370,7 +393,7 @@ void Chip8::_dxyn() {
 	V[0xF] = 0;
 
 	for (unsigned int row = 0; row < height; ++row) {
-		uint8_t spriteByte = memory[index + row];
+		uint8_t spriteByte = memory[I + row];
 
 		for (unsigned int col = 0; col < 8; ++col) {
 			uint8_t spritePixel = spriteByte & (0x80u >> col);

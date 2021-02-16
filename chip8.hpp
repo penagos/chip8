@@ -2,12 +2,14 @@
 #include <string>
 
 #include "common.hpp"
+#include "gfx.hpp"
 #include "op.hpp"
 
 namespace chip8 {
 class Chip8 final {
     public:
         Chip8(std::string aROMName);
+        ~Chip8();
         void emulate();
     private:
         void boot();
@@ -70,6 +72,11 @@ class Chip8 final {
 
         // Map 16 input keys to a state array
         uint8_t key[MAX_KEYS];
+
+        // Gfx handle
+        Gfx* gfxHandle;
+
+        bool quit;
 
         // Some instructions in the CHIP-8 ISA rely on a random number value.
         // In hardware this is usually accomplished with a dedicated chip or
