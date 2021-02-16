@@ -11,6 +11,8 @@ class Chip8 final {
         void emulate();
     private:
         void boot();
+        void loadInsts();
+        void tick();
         void loadROM(std::string aROMName);
         void error(std::string aMessage) const;
 
@@ -75,11 +77,66 @@ class Chip8 final {
         std::uniform_int_distribution<uint8_t> rand;
         std::default_random_engine randGen;
 
+        void Table0() {
+            ((*this).*(table0[opcode & 0x000Fu]))();
+        }
+
+        void Table8() {
+            ((*this).*(table8[opcode & 0x000Fu]))();
+        }
+
+        void TableE() {
+            ((*this).*(tableE[opcode & 0x000Fu]))();
+        }
+
+        void TableF() {
+            ((*this).*(tableF[opcode & 0x00FFu]))();
+        }
+
+        void OP_NULL() { }
+
+        typedef void (Chip8::*Chip8Func)();
+        Chip8Func table[0xF + 1]{&Chip8::OP_NULL};
+        Chip8Func table0[0xE + 1]{&Chip8::OP_NULL};
+        Chip8Func table8[0xE + 1]{&Chip8::OP_NULL};
+        Chip8Func tableE[0xE + 1]{&Chip8::OP_NULL};
+        Chip8Func tableF[0x65 + 1]{&Chip8::OP_NULL};
+
         // Below are the 35 instructions defined by the CHIP-8 ISA
         void _0nnn();
         void _00e0();
         void _00ee();
         void _1nnn();
         void _2nnn();
+        void _3xkk();
+        void _4xkk();
+        void _5xy0();
+        void _6xkk();
+        void _7xkk();
+        void _8xy0();
+        void _8xy1();
+        void _8xy2();
+        void _8xy3();
+        void _8xy4();
+        void _8xy5();
+        void _8xy6();
+        void _8xy7();
+        void _8xyE();
+        void _9xy0();
+        void _annn();
+        void _bnnn();
+        void _cxkk();
+        void _dxyn();
+        void _ex9e();
+        void _exa1();
+        void _fx07();
+        void _fx0a();
+        void _fx15();
+        void _fx18();
+        void _fx1e();
+        void _fx29();
+        void _fx33();
+        void _fx55();
+        void _fx65();
 };
 } // chip8 namespace
