@@ -5,7 +5,8 @@
 
 #include "chip8.hpp"
 
-#define DEBUG 1
+// Uncomment for instruction stream prints
+// #define DEBUG 1
 
 namespace chip8 {
 Chip8::Chip8(std::string aROMName)
@@ -112,7 +113,7 @@ void Chip8::loadROM(std::string aROMName) {
 void Chip8::emulate() {
     int videoPitch = sizeof(gfx[0]) * GFX_WIDTH;
 	auto lastCycleTime = std::chrono::high_resolution_clock::now();
-    int cycleDelay = std::stoi("1");
+    int cycleDelay = std::stoi("10");
     unsigned int tock = 0;
 
     while (!quit) {
