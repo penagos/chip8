@@ -64,7 +64,7 @@ class Chip8 final {
         uint8_t stack[STACK_SIZE];
 
         // CHIP-8 graphics screen is 64x32 pixels where sprites are XORed
-        uint8_t gfx[GFX_WIDTH * GFX_HEIGHT];
+        uint32_t gfx[GFX_WIDTH * GFX_HEIGHT];
 
         // Timers used for events and sounds
         uint8_t delayTimer;

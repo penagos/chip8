@@ -109,6 +109,7 @@ void Chip8::emulate() {
     int videoPitch = sizeof(gfx[0]) * GFX_WIDTH;
 	auto lastCycleTime = std::chrono::high_resolution_clock::now();
     int cycleDelay = std::stoi("1");
+    unsigned int tock = 0;
 
     while (!quit) {
         quit = gfxHandle->input(key);
@@ -118,8 +119,10 @@ void Chip8::emulate() {
 
 		if (dt > cycleDelay) {
 			lastCycleTime = currentTime;
+            std::cout << "tock: " << tock << ", pc = " << pc << ", opcode = " << ((opcode & 0xF000u)) << std::endl;
             tick();
             gfxHandle->update(gfx, videoPitch);
+            ++tock;
         }
     }
 }
@@ -399,17 +402,17 @@ void Chip8::_dxyn() {
 
 		for (unsigned int col = 0; col < 8; ++col) {
 			uint8_t spritePixel = spriteByte & (0x80u >> col);
-			uint8_t* screenPixel = &gfx[(yPos + row) * GFX_WIDTH + (xPos+col)];
+			uint32_t* screenPixel = &gfx[(yPos + row) * GFX_WIDTH + (xPos+col)];
 
 			// Sprite pixel is on
 			if (spritePixel) {
 				// Screen pixel also on - collision
-				if (*screenPixel == 0xFF) {
+				if (*screenPixel == 0xFFFFFF) {
 					V[0xF] = 1;
 				}
 
 				// Effectively XOR with the sprite pixel
-				*screenPixel ^= 0xFF;
+				*screenPixel ^= 0xFFFFFF;
 			}
 		}
 	}
