@@ -30,6 +30,8 @@ void Chip8::boot() {
     // Initialize rand register
     rand = std::uniform_int_distribution<uint8_t>(0, 255U);
 
+    pc = MEM_LO;
+
     int videoScale = std::stoi("10");
 
     gfxHandle = new Gfx("CHIP-8 Emulator", GFX_WIDTH * videoScale, GFX_HEIGHT * videoScale,
